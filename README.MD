@@ -1,7 +1,3 @@
-# Objective
-
-This sample project implements the concept of identity, claims and endorsements described in the blog post:
-
 # Prerequisites
 
 * Ganache
@@ -11,7 +7,10 @@ This sample project implements the concept of identity, claims and endorsements 
 
 # Setup
 
-* Ganache: use mnemonic "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 * Clone project with `git clone` or download the project as a compressed file
 
-candy maple cake sugar pudding cream honey rich smooth crumble sweet treat
+# Run
+
+* Start Ganache with mnemonic "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+* Build project with `mvn clean package`
+* Change to directory target and start application with `java -jar identity-1.0-SNAPSHOT-jar-with-dependencies.jar`

@@ -33,6 +33,10 @@ public class Main {
         Credentials credIdentity = Credentials.create(pkIdentity);
         Credentials credIssuer = Credentials.create(pkIssuer);
 
+        System.out.println("Generated Credentials for");
+        System.out.println("\tIdentity    [" + credIdentity.getAddress() + "]");
+        System.out.println("\tClaimIssuer [" + credIssuer.getAddress() + "]");
+
         // addresses of accounts 0 and 1
         // account 0 is the deployers account, account 1 is the external signer account for the issuer contract
         log.info("Identity address: " + credIdentity.getAddress());
@@ -46,9 +50,15 @@ public class Main {
         log.info("claimholder contract: " + me.getContractAddress());
         log.info("keyholder contract: " + kh.getContractAddress());
 
+        System.out.println("\nDeployed Identity (KeyHolder) and ClaimIssuer contracts");
+        System.out.println("\tKeyHolder contract   [" + kh.getContractAddress() + "]");
+        System.out.println("\tClaimIssuer contract [" + me.getContractAddress() + "]");
+
         // add the key to the keyholder account
         // the key will be verified by the Verifier contract
         kh.addKey(Hash.sha3(Numeric.hexStringToByteArray(credIssuer.getAddress())), BigInteger.valueOf(3l), BigInteger.valueOf(1l)).send();
+
+        System.out.println("\nAdded Signer key for claim issuer to KeyHolder contract.");
 
         // prepare signed message which is check by the Verifier contract
         // must be signed by the external account the address of which has been stored in the keyholder account in the last addKey step
@@ -78,11 +88,15 @@ public class Main {
 
         // finally, add the claim to the identity contract
         me.addClaim(BigInteger.valueOf(3l), BigInteger.valueOf(1l), kh.getContractAddress(), sigBuffer.array(), new byte[0], "").send();
+        System.out.println("\nAdded Claim with signature of claim issuer to KeyHolder contract.");
 
         // deploy the Verifier contract which is bound to the keyholder contract
         ClaimVerifier verifier = ClaimVerifier.deploy(web3j, credIdentity, ManagedTransaction.GAS_PRICE, Contract.GAS_LIMIT, kh.getContractAddress()).send();
 
+        System.out.println("Deployed Verifier contract with ClaimIssuer as trustedClaimIssuer.");
         log.info("recovered signature address: " + verifier.signedAndHashed(me.getContractAddress(), BigInteger.valueOf(3l), new byte[0], sigBuffer.array()).send());
         log.info("is claim valid? " + verifier.claimIsValid(me.getContractAddress(), BigInteger.valueOf(3l)).send());
+
+        System.out.println("Check if claim is valid: " + verifier.claimIsValid(me.getContractAddress(), BigInteger.valueOf(3l)).send());
     }
 }

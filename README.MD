@@ -11,9 +11,13 @@
 
 # Run
 
-* Start Ganache with mnemonic "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+* Start Ganache with mnemonic `candy maple cake sugar pudding cream honey rich smooth crumble sweet treat`
 * Build project with `mvn clean package`
 * Change to directory target and start application with `java -jar identity-1.0-SNAPSHOT-jar-with-dependencies.jar`
+
+# Caveats
+
+If you encounter a problem with resolving the Solidity Compiler (`solc`), you have to install this separately: https://solidity.readthedocs.io/en/develop/installing-solidity.html#binary-packages 
 
 # Credentials
 

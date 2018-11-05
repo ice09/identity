@@ -33,9 +33,14 @@ public class Main {
         Credentials credIdentity = Credentials.create(pkIdentity);
         Credentials credIssuer = Credentials.create(pkIssuer);
 
-        System.out.println("Generated Credentials for");
-        System.out.println("\tIdentity    [" + credIdentity.getAddress() + "]");
-        System.out.println("\tClaimIssuer [" + credIssuer.getAddress() + "]");
+        System.out.println("*** INITIALIZATION ***");
+
+        System.out.println("\nGenerated Credentials for");
+        System.out.println("\tIdentity (ClaimHolder) [" + credIdentity.getAddress() + "]");
+        System.out.println("\tKeyHolder              [" + credIssuer.getAddress() + "]");
+
+        System.out.println("\nWe now have created Alice's external account [" + credIdentity.getAddress() + "] and the age verifier's (in the example: her local bank's) external account [" + credIssuer.getAddress() + "]");
+        System.out.println("The bank will use this account to sign the claim (ABOVE_18). IRL this would be a multisig wallet account or some other governance mechanism which allowed for administration of this signing key.");
 
         // addresses of accounts 0 and 1
         // account 0 is the deployers account, account 1 is the external signer account for the issuer contract
@@ -44,21 +49,25 @@ public class Main {
 
         // deploy the identity contract with account 0
         // this identity contract should receive the claim
+        System.out.println("\nDeploying ClaimHolder contract...");
         ClaimHolder me = ClaimHolder.deploy(web3j, credIdentity, ManagedTransaction.GAS_PRICE, Contract.GAS_LIMIT).send();
+        System.out.println("\tClaimIssuer contract [" + me.getContractAddress() + "]");
+        System.out.println("Deployment of Alice's identity contract was successful, this contract can now hold claims, eg. the claim that Alice is above 18 years old.");
+
         // deploy the keyholder account, the contract of the issuer of the claim, in the sample the age verifier
+        System.out.println("\nDeploy KeyHolder contract...");
         KeyHolder kh = KeyHolder.deploy(web3j, credIdentity, ManagedTransaction.GAS_PRICE, Contract.GAS_LIMIT).send();
+        System.out.println("\tKeyHolder contract   [" + kh.getContractAddress() + "]");
+        System.out.println("Deployment of banks's KeyHolder contract was successful, now signing keys can be added to this contract from external accounts like the bank's own external account.");
         log.info("claimholder contract: " + me.getContractAddress());
         log.info("keyholder contract: " + kh.getContractAddress());
 
-        System.out.println("\nDeployed Identity (KeyHolder) and ClaimIssuer contracts");
-        System.out.println("\tKeyHolder contract   [" + kh.getContractAddress() + "]");
-        System.out.println("\tClaimIssuer contract [" + me.getContractAddress() + "]");
-
         // add the key to the keyholder account
         // the key will be verified by the Verifier contract
+        System.out.println("\n*** SETUP ***");
         kh.addKey(Hash.sha3(Numeric.hexStringToByteArray(credIssuer.getAddress())), BigInteger.valueOf(3l), BigInteger.valueOf(1l)).send();
-
-        System.out.println("\nAdded Signer key for claim issuer to KeyHolder contract.");
+        System.out.println("\nThe bank's external added the signer key for the age claim issuer to the KeyHolder contract.");
+        System.out.println("This key will be checked by the Verifier contract, which recovers the address from the signature and asks the KeyHolder is the key is (still) valid.");
 
         // prepare signed message which is check by the Verifier contract
         // must be signed by the external account the address of which has been stored in the keyholder account in the last addKey step
@@ -88,7 +97,9 @@ public class Main {
 
         // finally, add the claim to the identity contract
         me.addClaim(BigInteger.valueOf(3l), BigInteger.valueOf(1l), kh.getContractAddress(), sigBuffer.array(), new byte[0], "").send();
-        System.out.println("\nAdded Claim with signature of claim issuer to KeyHolder contract.");
+        System.out.println("\nAdded age verification claim with signature of claim issuer to ClaimHolder contract. The issuer address is the KeyHolder contract's address, so the Verifier can check the key.");
+        System.out.println("The key is the hashed recovered address of the signer, which is the claim issuer (bank's) external account.");
+        System.out.println("The hashed address is registered as signing key in the KeyHolder contract.");
 
         // deploy the Verifier contract which is bound to the keyholder contract
         ClaimVerifier verifier = ClaimVerifier.deploy(web3j, credIdentity, ManagedTransaction.GAS_PRICE, Contract.GAS_LIMIT, kh.getContractAddress()).send();
@@ -97,6 +108,13 @@ public class Main {
         log.info("recovered signature address: " + verifier.signedAndHashed(me.getContractAddress(), BigInteger.valueOf(3l), new byte[0], sigBuffer.array()).send());
         log.info("is claim valid? " + verifier.claimIsValid(me.getContractAddress(), BigInteger.valueOf(3l)).send());
 
-        System.out.println("Check if claim is valid: " + verifier.claimIsValid(me.getContractAddress(), BigInteger.valueOf(3l)).send());
+        System.out.println("\n*** VERIFICATION ***");
+        System.out.println("\nNow, check if claim is valid: " + verifier.claimIsValid(me.getContractAddress(), BigInteger.valueOf(3l)).send());
+
+        System.out.println("\nIn this sample two contracts have been deployed: a KeyHolder (bank) and a ClaimHolder (Alice).");
+        System.out.println("A key is added to the KeyHolder contract by an external account, which stores the key at the hashed address of itself.");
+        System.out.println("A claim is signed by the external account and added to Alice (the ClaimHolder's) contract as a claim.");
+        System.out.println("During verification, the claim is loaded from the ClaimHolder account, the signer's address is recovered and the KeyHolder account is asked for the presence of the (hash of) the signing address.");
+        System.out.println("\nIf these conditions are met, the claim is successfully verified. The external signing account can at every time remove the key from the KeyHolder and therefore render the claim invalid on next verification.");
     }
 }
